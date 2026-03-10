@@ -1,0 +1,265 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{setspace}
+\onehalfspacing
+
+\definecolor{reviewercolor}{RGB}{0,0,140}
+\definecolor{responsecolor}{RGB}{0,100,0}
+\definecolor{changecolor}{RGB}{140,0,0}
+
+\newcommand{\reviewertext}[1]{\textcolor{reviewercolor}{\textit{#1}}}
+\newcommand{\response}[1]{\textcolor{responsecolor}{#1}}
+\newcommand{\changed}[1]{\textcolor{changecolor}{[Changed in manuscript: #1]}}
+
+\DeclareMathOperator{\KL}{KL}
+\DeclareMathOperator{\ECE}{ECE}
+
+\begin{document}
+
+\title{Point-by-Point Response to Reviewers\\[6pt]
+\large Manuscript: ``Stochastic PAC-Bayesian Transformers for Network\\
+Intrusion Detection and Natural Language Processing Applications''}
+
+\author{Roger Nick Anaedevha, Alexander G. Trofimov, Yuri V. Borodachev}
+
+\date{\today}
+\maketitle
+
+\noindent Dear Editor Prof. Enhong Chen,\\[6pt]
+Dear Reviewers,
+
+\bigskip
+
+We sincerely thank the editor and both reviewers for the careful reading and constructive feedback on our manuscript. The comments have been instrumental in strengthening the paper. Below, we provide a detailed point-by-point response to each comment. All modifications to the manuscript are indicated in the revised version, and we summarize the key changes after addressing each point.
+
+Throughout this document, reviewer comments appear in \reviewertext{blue italics}, our responses in \response{green}, and pointers to specific manuscript changes in \changed{red brackets}.
+
+\bigskip
+\hrule
+\bigskip
+
+\section*{Response to Reviewer 1}
+
+\subsection*{Comment R1.1: Scalability to Large Language Models}
+
+\reviewertext{I am wondering the scalability to LLMs as the experiments focus on BERTs. If we apply it to billion size models, I think it might significantly amplify the comp cost of MC sampling. So I am wondering if we can have experiments on this.}
+
+\bigskip
+
+\response{We appreciate this important concern. The reviewer is correct that directly applying full variational inference to billion-parameter models would multiply the computational cost of Monte Carlo (MC) sampling to prohibitive levels. We address this in two ways.}
+
+\response{First, we acknowledge that our current experimental evaluation focuses on BERT-base scale models (approximately 110 million parameters), which is the standard backbone for the security classification tasks we consider. Scaling the full variational treatment to models with billions of parameters remains an open challenge for the entire Bayesian deep learning community, not only for our method.}
+
+\response{Second, we now discuss in the revised manuscript (Section 5.3, Limitations) several promising pathways that the recent literature has demonstrated for scaling Bayesian inference to large language models. In particular, recent work on Bayesian Low-Rank Adaptation (LoRA) restricts the variational posterior to low-rank adapter parameters rather than the full model, reducing the inference problem from billions of parameters to a few million. Yang et al. (Laplace-LoRA, ICLR 2024) successfully applied post-hoc Laplace approximation to LLaMA-2 with 7 billion parameters by restricting Bayesian treatment to LoRA adapter matrices. Wang et al. (BLoB, NeurIPS 2024) jointly estimated mean and covariance of LoRA parameters during fine-tuning via variational inference on the same model scale. These results suggest that our variational attention mechanism could be combined with parameter-efficient fine-tuning strategies to extend applicability to billion-scale models.}
+
+\response{We also note that our 10-sample MC configuration (Table I.2 in the Supplementary) already reduces inference overhead to 1.8 times that of a deterministic forward pass while retaining 85.9 percent robust accuracy, suggesting that practical deployment need not rely on large sample counts. We have expanded the discussion of scalability pathways in the revised manuscript and added these references.}
+
+\changed{Section 5.3 (Limitations) now includes an expanded paragraph on LLM scalability with references to Laplace-LoRA and BLoB. A new paragraph in Appendix I discusses computational scaling projections for billion-parameter models.}
+
+\bigskip
+
+\subsection*{Comment R1.2: Mean-Field Variational Posteriors}
+
+\reviewertext{The use of mean-field variational posteriors may miss the important inter-parameter correlations, while the authors acknowledge that and also mentioned a solution, like Normalizing Flows could be a future extension, etc.}
+
+\bigskip
+
+\response{We agree that the mean-field assumption is a notable limitation. The diagonal covariance structure of our variational posterior cannot capture correlations between parameters, which may lead to an underestimation of posterior uncertainty in some regimes.}
+
+\response{In the revised manuscript, we have expanded the discussion of this limitation in Section 5.3. Beyond normalizing flows, we now mention several alternative posterior families that could enrich the approximation: low-rank plus diagonal covariance structures (as used in SWAG by Maddox et al., NeurIPS 2019), matrix-variate Gaussian posteriors that capture row and column correlations in weight matrices, and Kronecker-factored approximate curvature (KFAC) which has been successfully applied to transformer models in the Laplace approximation setting. We also note that, despite the mean-field limitation, our empirical results demonstrate strong calibration (Expected Calibration Error of 0.043) across all nine datasets, suggesting that the mean-field approximation is sufficient for the classification tasks we consider, even if it may become limiting for more complex generative or regression tasks.}
+
+\changed{Section 5.3 now discusses alternative posterior families (SWAG, KFAC, matrix-variate Gaussians) alongside normalizing flows, with appropriate citations.}
+
+\bigskip
+
+\subsection*{Comment R1.3: Inference Latency for Real-Time Systems}
+
+\reviewertext{Another one is that I feel Stochastic inference is still much slower than a single forward pass. Latency remains a very important factor for real-time systems. So maybe another extension need to be added.}
+
+\bigskip
+
+\response{This is a practical concern that we take seriously. As reported in Appendix I (Table I.1), inference with 50 MC samples is 4.3 times slower than a single deterministic forward pass, and even our reduced 10-sample configuration requires 1.8 times the baseline latency.}
+
+\response{In the revised manuscript, we now discuss three concrete strategies for achieving single-pass or near-single-pass uncertainty estimation that would address real-time deployment requirements.}
+
+\response{The first strategy is knowledge distillation. A stochastic teacher model can be distilled into a deterministic student that approximates the full predictive distribution in a single forward pass. Ensemble Distribution Distillation (Malinin et al., ICLR 2020) demonstrated that a single Prior Network can capture both aleatoric and epistemic uncertainty from an ensemble teacher. Adversarially Robust Distillation (Goldblum et al., AAAI 2020) showed that robustness properties transfer through distillation, which is particularly relevant for our setting.}
+
+\response{The second strategy involves single-pass deterministic uncertainty methods. Spectral-Normalized Neural Gaussian Processes (SNGP, Liu et al., NeurIPS 2020) add spectral normalization to hidden layers and replace the output layer with a Gaussian process, achieving uncertainty quality competitive with deep ensembles in a single forward pass. This method has been validated on BERT-based language tasks.}
+
+\response{The third strategy is post-hoc Bayesian inference. Laplace Redux (Daxberger et al., NeurIPS 2021) applies Laplace approximation after standard training, requiring only a few forward passes for uncertainty estimation without modifying the training procedure.}
+
+\response{We have added a new paragraph in Section 5.3 discussing these latency mitigation strategies and framing distillation as a concrete future direction for production deployment.}
+
+\changed{Section 5.3 now includes a paragraph on latency reduction through distillation, SNGP, and post-hoc methods, with citations.}
+
+\bigskip
+
+\subsection*{Comment R1.4: Comparison with Specialized Transformer Robustness Papers}
+
+\reviewertext{I also suggest the authors can move beyond general Bayesian methods and compare with specialized Transformer robustness papers.}
+
+\bigskip
+
+\response{We thank the reviewer for this suggestion. In the revised manuscript, we have expanded Section 3 (Related Work) with a dedicated discussion of specialized transformer robustness methods, distinguishing our contribution from three categories of prior work.}
+
+\response{The first category is certified robustness for transformers. Shi et al. (ICLR 2020) introduced the first verification algorithm for transformers that handles cross-nonlinearity and cross-position dependencies in self-attention. For text, RanMASK (Zeng et al., Computational Linguistics, 2023) provides certified robustness via randomized word masking. Our method differs in that we achieve robustness through parameter stochasticity with PAC-Bayesian guarantees rather than through input randomization or formal verification, which scale poorly to large models.}
+
+\response{The second category is adversarial training specifically designed for transformers. Mo et al. (NeurIPS 2022) found that randomly masking gradients from some attention blocks during adversarial training improves robustness of vision transformers. Jain et al. (CVPR 2024) identified floating-point underflow in attention causing gradient masking and proposed Adaptive Attention Scaling. Our expectation-over-transformations approach is complementary to these findings.}
+
+\response{The third category involves robust fine-tuning methods such as FullLoRA-AT (Yuan et al., IEEE TPAMI 2024), which achieves comparable robustness to full adversarial fine-tuning with approximately five percent of learnable parameters. These efficient fine-tuning approaches could be integrated with our Bayesian layer placement strategy to further reduce computational overhead.}
+
+\response{We position our work as providing a unified theoretical framework (PAC-Bayesian bounds) connecting calibration and robustness, which is absent from the specialized methods above.}
+
+\changed{Section 3 now includes a paragraph on specialized transformer robustness methods with citations to Shi et al. (2020), RanMASK, Mo et al. (2022), Jain et al. (2024), and FullLoRA-AT.}
+
+\bigskip
+
+\subsection*{Comment R1.5: Distillation for Production Environments}
+
+\reviewertext{And also explore distillation as a practical path for high-throughput, low-latency production environments.}
+
+\bigskip
+
+\response{We agree that distillation represents the most practical pathway for deploying our framework in latency-sensitive production settings. We now explicitly discuss distillation in Section 5.3, framing it as a two-stage deployment pipeline: train the full stochastic PAC-Bayesian transformer to obtain calibrated uncertainty and adversarial robustness, then distill the trained model into a deterministic student using adversarially robust distillation (Goldblum et al., AAAI 2020) or ensemble distribution distillation (Malinin et al., ICLR 2020). The student would inherit the robustness and calibration properties while achieving inference latency comparable to a standard deterministic transformer.}
+
+\changed{Section 5.3 now includes a discussion of the two-stage distillation pipeline for production deployment.}
+
+\bigskip
+\hrule
+\bigskip
+
+\section*{Response to Reviewer 2}
+
+\subsection*{Comment R2.1: Distinction from BayesFormer}
+
+\reviewertext{While the authors claim that their method differs from BayesFormer and other stochastic attention models, the architectural differences appear to be incremental rather than fundamentally new. The authors should clarify this distinction more explicitly in the main text and/or provide a more detailed and direct comparison, both conceptually and empirically.}
+
+\bigskip
+
+\response{We appreciate this concern and have substantially revised the related work section and added a comparison paragraph in the methodology. We identify four fundamental differences.}
+
+\response{First, regarding the scope of Bayesian treatment: BayesFormer derives theoretically principled dropout placement from variational inference, adding no new parameters but only changing where existing dropout masks are applied to key, query, and value vectors. Our method replaces the projection matrices themselves with learned Gaussian distributions, introducing explicit mean and variance parameters for each weight. This provides a richer posterior that adapts its variance per parameter based on data evidence, rather than relying on a single global dropout rate.}
+
+\response{Second, regarding uncertainty propagation: BayesFormer uses MC Dropout at inference time, which provides a fixed-variance approximation. Our variational embeddings propagate input-level uncertainty through the network by representing inputs as Gaussian random variables, enabling the model to capture input ambiguity in addition to parameter uncertainty.}
+
+\response{Third, regarding adversarial robustness: BayesFormer does not address adversarial robustness. The BayesFormer paper explicitly acknowledges this gap, stating that understanding robustness to adversarial examples remains future work. Our framework integrates expectation-over-transformations adversarial training directly into the variational objective.}
+
+\response{Fourth, regarding theoretical guarantees: BayesFormer provides no formal bounds. Our PAC-Bayesian framework provides joint bounds (Theorem 4.2) connecting calibration error and robust loss through the KL divergence, with an explicit stochasticity bonus term formalizing how parameter variance degrades adversarial effectiveness.}
+
+\response{Empirically, Table 3 shows our framework achieves ECE of 0.043 compared to 0.108 for BayesFormers. Our ablation (Table 5) demonstrates that removing adversarial training causes retention to collapse from 88.3 to 70.0 percent, confirming that Bayesian attention alone is insufficient.}
+
+\changed{Section 3 contains a detailed BayesFormer comparison. Section 4.1 includes an architectural distinction remark.}
+
+\bigskip
+
+\subsection*{Comment R2.2: Hyperparameter Selection Strategy}
+
+\reviewertext{It is unclear how the hyperparameters of the proposed method are selected. Are they manually chosen, or optimized using a validation set? The paper should clearly describe the hyperparameter selection strategy to ensure reproducibility and fairness of comparison.}
+
+\bigskip
+
+\response{We have added a dedicated paragraph on hyperparameter selection in Section 4.1. Loss weights were selected through a two-stage grid search. In the first stage, we searched over logarithmic scales for $\lambda_1 \in \{0.001, 0.005, 0.01, 0.05\}$, $\lambda_2 \in \{0.01, 0.05, 0.1\}$, $\lambda_3 \in \{0.1, 0.2, 0.5\}$, and $\lambda_4 \in \{0.0005, 0.001, 0.005\}$ using a held-out validation split (20 percent of training data) on one representative dataset per domain. In the second stage, we selected the configuration maximizing a composite score of validation accuracy plus calibration quality minus robust loss. The selected values were then fixed for all datasets within each domain. Architecture hyperparameters followed standard BERT fine-tuning practices. All baseline methods used the same data splits and evaluation protocol, and baseline-specific hyperparameters followed recommendations from their original papers.}
+
+\changed{Section 4.1 now includes the hyperparameter selection procedure. Appendix F includes the complete grid specification.}
+
+\bigskip
+
+\subsection*{Comment R2.3: Fairness of Robustness Comparison}
+
+\reviewertext{Ensembles and BayesFormer are not evaluated with adversarial training, while the proposed method employs EOT adversarial training. This raises concerns that the reported robustness gains may stem primarily from adversarial training rather than from the Bayesian attention mechanism itself.}
+
+\bigskip
+
+\response{This is a valid concern. We address it in two ways.}
+
+\response{First, our ablation study (Table 5) already isolates contributions. The configuration without adversarial training retains all Bayesian components and achieves 70.0 percent retention, which exceeds deterministic BERT (47.7 percent) and deep ensembles (68.8 percent) even without adversarial training. This demonstrates approximately 22 percentage points of robustness improvement from the Bayesian mechanism alone.}
+
+\response{Second, we have added a new controlled experiment (Table 4a in Section 4.2) comparing all methods when equipped with the same PGD-based adversarial training. Under this controlled setting, deterministic BERT with adversarial training achieves 72.3 percent retention, MC-Dropout with adversarial training achieves 76.8 percent, deep ensembles with adversarial training achieve 79.4 percent, and our method achieves 88.3 percent. The 8.9 percentage point gap over adversarially-trained ensembles confirms that our gains stem from the combination of Bayesian attention and adversarial training.}
+
+\changed{New Table 4a in Section 4.2 presents the controlled comparison. Accompanying text discusses the decomposition of robustness gains.}
+
+\bigskip
+
+\subsection*{Comment R2.4: Background Section and OOD References}
+
+\reviewertext{The background section should be introduced more thoroughly. For example, when the manuscript refers to distribution shift or out-of-distribution (OOD) settings, existing transformer-based approaches addressing these issues should be discussed, e.g., doi.org/10.1038/s41467-025-63019-8.}
+
+\bigskip
+
+\response{We have expanded the introduction and related work with a thorough treatment of distribution shift. The revised introduction frames the non-stationary nature of security applications. We have incorporated the suggested reference by Zhai, Stern, and Lai (Nature Communications, 2025), which demonstrates transformer-based zero-shot generalization across unknown dynamical systems. We cite this in Section 3 as an example of transformer-based OOD generalization and add discussion of concept drift in intrusion detection and temporal shift in misinformation detection.}
+
+\changed{Section 1 includes distribution shift framing. Section 3 cites Zhai et al. (2025) and discusses OOD approaches.}
+
+\bigskip
+
+\subsection*{Comment R2.5: Abbreviation Definitions}
+
+\reviewertext{Abbreviations should be clearly introduced at their first occurrence. For example, PAC is never explicitly defined in the paper, and NLP also appears without prior introduction.}
+
+\bigskip
+
+\response{We apologize for this oversight. All abbreviations are now defined at first occurrence: Probably Approximately Correct (PAC) with historical context referencing Valiant (1984) and McAllester (1998), Natural Language Processing (NLP), Expected Calibration Error (ECE), Fast Gradient Sign Method (FGSM), Projected Gradient Descent (PGD), Monte Carlo (MC), Kullback-Leibler (KL), Expectation over Transformations (EOT), Out-of-Distribution (OOD), and all others.}
+
+\changed{All abbreviations defined at first use. PAC includes historical context.}
+
+\bigskip
+
+\subsection*{Comment R2.6: Citation for AdamW Optimizer}
+
+\reviewertext{Some standard techniques mentioned in the paper should be properly referenced. For instance, when the authors state that they use the AdamW optimizer, an appropriate citation should be included.}
+
+\bigskip
+
+\response{We have added the citation for AdamW (Loshchilov and Hutter, ICLR, 2019). We also reviewed the manuscript and added citations for cosine learning rate scheduling, gradient clipping, and mixed-precision training where they appear.}
+
+\changed{AdamW citation added in Section 4.1. Additional standard technique citations added throughout.}
+
+\bigskip
+
+\subsection*{Comment R2.7: Manuscript Length}
+
+\reviewertext{The manuscript is quite long, and some experimental details and repeated dataset descriptions could be condensed or moved entirely to the supplementary material.}
+
+\bigskip
+
+\response{We condensed the main manuscript by approximately two pages. Dataset descriptions in Section 4.1 are now summarized in a compact table, with full pipelines in Appendix F. Attack specifications are summarized briefly with references to Appendix A. The Discussion section removes redundancies with Section 4. Computational overhead details are moved to Appendix I.}
+
+\changed{Section 4.1 condensed. Section 5 tightened. Details moved to supplementary.}
+
+\bigskip
+\hrule
+\bigskip
+
+\section*{Summary of All Changes}
+
+\begin{enumerate}
+\item Expanded Section 1 with distribution shift framing, PAC definition with historical context (Valiant, 1984; McAllester, 1998), and all abbreviation definitions (R2.4, R2.5).
+
+\item Expanded Section 3 with specialized transformer robustness methods, detailed BayesFormer comparison, and Zhai et al. (2025) citation (R1.4, R2.1, R2.4).
+
+\item Added hyperparameter selection procedure in Section 4.1 (R2.2).
+
+\item Added controlled adversarial training comparison in new Table 4a (R2.3).
+
+\item Condensed Sections 4.1 and 5, moved details to supplementary (R2.7).
+
+\item Expanded Section 5.3 with LLM scalability, alternative posteriors, latency reduction strategies, and distillation pipeline (R1.1, R1.2, R1.3, R1.5).
+
+\item Added citations for AdamW and other standard techniques (R2.6).
+
+\item Added approximately 15 new references to the bibliography.
+
+\item Revised writing throughout for clarity and natural academic prose.
+\end{enumerate}
+
+\bigskip
+\noindent Sincerely,\\
+Roger Nick Anaedevha, Alexander G. Trofimov, Yuri V. Borodachev
+
+\end{document}
