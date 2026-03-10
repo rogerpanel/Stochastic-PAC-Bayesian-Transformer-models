@@ -1,0 +1,31 @@
+# Stochastic PAC-Bayesian Transformers
+# Software dependencies as specified in Appendix J of the paper
+
+# Core
+torch>=1.12.0
+numpy>=1.22.3
+pandas>=1.4.2
+scikit-learn>=1.1.1
+scipy>=1.8.1
+tqdm>=4.64.0
+
+# Transformers / NLP
+transformers>=4.20.0
+tokenizers>=0.12.0
+
+# Adversarial attacks
+textattack>=0.3.8
+foolbox>=3.3.3
+
+# Visualization
+matplotlib>=3.5.2
+seaborn>=0.11.2
+
+# Logging
+tensorboard>=2.9.1
+
+# Configuration
+pyyaml>=6.0
+
+# Optional: experiment tracking
+# wandb>=0.12.21

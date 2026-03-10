@@ -1,0 +1,131 @@
+# =============================================================================
+# Stochastic PAC-Bayesian Transformer - Default Configuration
+# Paper: "Stochastic PAC-Bayesian Transformers for Network Intrusion Detection
+#         and Natural Language Processing Applications"
+# Authors: R. N. Anaedevha, A. G. Trofimov, Y. V. Borodachev
+# =============================================================================
+
+# --- Architecture ---
+model:
+  num_layers: 12
+  num_heads: 8
+  d_model: 256
+  d_ff: 1024
+  dropout: 0.1
+  activation: "gelu"
+  layer_norm: "pre"                    # pre-norm (before attention)
+  bayesian_layers: [3, 6, 9, 12]       # 1-indexed layers with Bayesian attention
+  pretrained_backbone: "bert-base-uncased"
+
+# --- Variational parameters ---
+variational:
+  prior_mean_init: "pretrained"        # initialize from pretrained weights
+  prior_variance: 0.01                 # sigma_0^2
+  posterior_log_var_init: -6.0          # log(var) ~ 0.0025
+  parameterization: "log_variance"     # for numerical stability
+
+# --- Monte Carlo sampling ---
+mc_sampling:
+  train_samples: 30
+  inference_samples: 50
+  eot_gradient_samples: 5
+
+# --- Optimization ---
+training:
+  optimizer: "adamw"
+  learning_rate_network: 2.0e-5
+  learning_rate_text: 5.0e-5
+  beta1: 0.9
+  beta2: 0.999
+  weight_decay: 0.01
+  batch_size: 32
+  gradient_accumulation_steps: 4       # effective batch = 128
+  max_grad_norm: 1.0
+  warmup_fraction: 0.1
+  lr_schedule: "cosine"
+  max_epochs: 50
+  early_stopping_patience: 5
+  mixed_precision: true
+  gradient_checkpointing: true
+
+# --- Loss weights ---
+loss_weights:
+  lambda_kl: 0.01                      # KL divergence
+  lambda_cal: 0.05                     # calibration (Brier score)
+  lambda_adv: 0.2                      # adversarial
+  lambda_reg: 0.001                    # L2 regularization
+
+# --- Adversarial training ---
+adversarial:
+  attacks: ["fgsm", "pgd", "cw"]
+  epsilon_network: 0.1                 # UNSW default; 0.2 for CICIDS/CIC-IoT
+  epsilon_text: 0.3                    # embedding-space perturbation
+  pgd_steps: 10
+  pgd_step_size_fraction: 0.1         # step_size = epsilon / 10
+  cw_iterations: 100
+  cw_learning_rate: 0.01
+  cw_confidence: 1.0
+
+# --- Active learning ---
+active_learning:
+  initial_labeled_fraction: 0.1
+  query_budget_fraction: 0.05          # per round
+  al_frequency: 5                      # every N epochs
+  acquisition_weights:
+    epistemic: 0.5
+    entropy: 0.3
+    distance: 0.2
+
+# --- Evaluation ---
+evaluation:
+  ece_bins: 15
+  mc_inference_samples: 50
+  robustness_attacks: ["fgsm", "pgd", "cw", "textfooler"]
+
+# --- Reproducibility ---
+reproducibility:
+  seeds: [42, 123, 456]
+  deterministic: true
+  cudnn_benchmark: false
+
+# --- Dataset-specific overrides ---
+datasets:
+  cic_iot_2023:
+    num_features: 40
+    num_classes: 8
+    epsilon: 0.2
+    input_type: "tabular"
+  cse_cicids2018:
+    num_features: 79
+    num_classes: 14
+    epsilon: 0.2
+    input_type: "tabular"
+  unsw_nb15:
+    num_features: 44
+    num_classes: 2
+    epsilon: 0.1
+    input_type: "tabular"
+  metahate:
+    max_length: 512
+    num_classes: 2
+    input_type: "text"
+  hateval:
+    max_length: 512
+    num_classes: 2
+    input_type: "text"
+  founta:
+    max_length: 512
+    num_classes: 4
+    input_type: "text"
+  liar:
+    max_length: 256
+    num_classes: 6
+    input_type: "text"
+  fakenewsnet:
+    max_length: 512
+    num_classes: 2
+    input_type: "text"
+  isot:
+    max_length: 512
+    num_classes: 2
+    input_type: "text"
